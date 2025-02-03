@@ -87,7 +87,7 @@ void terminal_initialize(void)
     for (size_t y = 0; y < VGA_HEIGHT; y++) {
         for (size_t x = 0; x < VGA_WIDTH; x++) {
             const size_t index = y * VGA_WIDTH + x;
-            terminal_buffer[index] = vga_entry(' ', terminal_color)
+            terminal_buffer[index] = vga_entry(' ', terminal_color);
         }
     }
 }
@@ -126,7 +126,7 @@ void terminal_writestring(const char* data)
     terminal_write(data, strlen(data));
 }
 
-void kernal_main(void)
+void kernel_main(void)
 {
     /* initialize terminal interface */
     terminal_initialize();

@@ -1,0 +1,4 @@
+# compiled output files
+boot.o
+kernel.o
+vos.bin
