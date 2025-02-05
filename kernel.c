@@ -1,7 +1,7 @@
-#include <stdbool.h> /* supports the bool data types (bool, true, false, __bool_true_false_are_defined) */
-#include <stddef.h>  /* defines various variable types and macros (ptrdiff_t, size_t, wchar_t) */
-#include <stdint.h>  /* provides a set of integer types with specified widths */
-#include "string.c"
+#include <stdbool.h>
+#include <stddef.h> 
+#include <stdint.h>
+#include <sys/io.h>
 
 
 #ifdef __linux__ 
@@ -34,21 +34,11 @@ enum vga_color {
 
 static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg)
 {
-    /* 
-    fg = 0 decimal/00000000 binary, bg = 7 decimal/00000111 binary
-    fg | bg => 0 | 7 = 7 => 7 << 4 = 112 decimal/11100000 binary
-    */
     return fg | bg << 4; 
 }
 
 static inline uint16_t vga_entry(unsigned char uc, uint8_t color)
 {
-    /* 
-    line 88 example: 
-        type casting uc and color to uint16_t type
-        uc = ' ' has an ASCII value of 32, so 32 decimal/10000000 binary, color = 112 decimal/11100000 binary
-        uc | color => 32/10000000 | 112/11100000 = 112/11100000 => 112 << 8 = 28704 decimal/111000000100000 binary
-    */
     return (uint16_t) uc | (uint16_t) color << 8;
 }
 
@@ -94,24 +84,29 @@ void terminal_setcolor(uint8_t color)
 
 void terminal_putentryat(char c, uint8_t color, size_t x, size_t y)
 {
-    const size_t index = y * VGA_WIDTH + x;
-    terminal_buffer[index] = vga_entry(c, color);
+    const size_t i = y * VGA_WIDTH + x;
+    terminal_buffer[i] = vga_entry(c, color);
 }
 
 void terminal_scroll(void)
 {
-    /* scroll buffer up by one row */
-    const size_t buffer_size = (VGA_WIDTH - 1) * VGA_WIDTH;
-
-    memmove(terminal_buffer, terminal_buffer + VGA_WIDTH, buffer_size * 2);
-
-    /* clear the last row */
-    const size_t last_row_offset = VGA_HEIGHT - 1;
-
     for (size_t i = 0; i < VGA_HEIGHT; i++)
     {
-        terminal_putentryat(' ', terminal_color, i, last_row_offset);
+        for (size_t j = 0; j < VGA_WIDTH; j++)
+        {
+            terminal_buffer[i * VGA_WIDTH + j] = terminal_buffer[(i + 1) * VGA_WIDTH + j];
+        }
     }
+}
+
+void update_cursor(size_t x, size_t y)
+{
+    uint16_t pos = y * VGA_WIDTH + x;
+    
+    outb(0x3D4, 0x0F);
+    outb(0x3D5, (uint8_t) (pos & 0XFF));
+    outb(0x3D4, 0x0E);
+    outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
 }
 
 void terminal_putchar(char c)
@@ -119,22 +114,24 @@ void terminal_putchar(char c)
     /* check if newline, then increment row and reset column */
     if (c == '\n') 
     {
-        ++terminal_row;
+        if (terminal_row + 1 == VGA_HEIGHT)
+        {
+            terminal_scroll();
+            terminal_column = 0;
+        }
+
+        terminal_row++;
         terminal_column = 0;
     }
-
+    
     terminal_putentryat(c, terminal_color, terminal_column, terminal_row);
+    update_cursor(terminal_column + 1, terminal_row);
 
     if (++terminal_column == VGA_WIDTH) 
     {
         terminal_column = 0;
-        if (++terminal_row == VGA_HEIGHT)
-        {
-            terminal_scroll();
-            terminal_row = 0;
-        }
+        if (++terminal_row == VGA_HEIGHT) terminal_scroll();
     }
-    
 }
 
 void terminal_write(const char* data, size_t size)
@@ -156,10 +153,10 @@ void kernel_main(void)
     terminal_initialize();
 
     /* writes to the terminal */
-    terminal_writestring("Welcome to VybrantOS\n");
-    for (size_t i = 0; i < 50; i++)
-    {
-        terminal_writestring("VybrantOS\n");
-    }
+    terminal_writestring("Welcome to VybrantOS");
+    // for (size_t i = 0; i < 50; i++)
+    // {
+    //     terminal_writestring("VybrantOS\n");
+    // }
 }
 
