@@ -1,21 +1,13 @@
 #include <stdbool.h> /* supports the bool data types (bool, true, false, __bool_true_false_are_defined) */
 #include <stddef.h>  /* defines various variable types and macros (ptrdiff_t, size_t, wchar_t) */
 #include <stdint.h>  /* provides a set of integer types with specified widths */
+#include "string.c"
 
-/* 
-    - #ifdef: used to include a section of code if a certain macro is defined by define 
-    - checks if the compiler thinks you are targeting the wrong operating system
-    - __linux__ is a macro that indicates that the platform is linux (always predefined)
-*/
+
 #ifdef __linux__ 
 #error You are not using a cross-compiler, you will most certainly run into trouble
 #endif
 
-/*
-    - #ifndef: used to include a section of code if a certain macro is not defined by #define
-    - this program will only work for the 32-bit ix86 targets
-    - defined if a 32-bit x86 instruction set is the target
-*/
 #ifndef __i386__
 #error Needs to be with ix86-elf compiler.
 #endif
@@ -106,6 +98,22 @@ void terminal_putentryat(char c, uint8_t color, size_t x, size_t y)
     terminal_buffer[index] = vga_entry(c, color);
 }
 
+void terminal_scroll(void)
+{
+    /* scroll buffer up by one row */
+    const size_t buffer_size = (VGA_WIDTH - 1) * VGA_WIDTH;
+
+    memmove(terminal_buffer, terminal_buffer + VGA_WIDTH, buffer_size * 2);
+
+    /* clear the last row */
+    const size_t last_row_offset = VGA_HEIGHT - 1;
+
+    for (size_t i = 0; i < VGA_HEIGHT; i++)
+    {
+        terminal_putentryat(' ', terminal_color, i, last_row_offset);
+    }
+}
+
 void terminal_putchar(char c)
 {
     /* check if newline, then increment row and reset column */
@@ -120,7 +128,11 @@ void terminal_putchar(char c)
     if (++terminal_column == VGA_WIDTH) 
     {
         terminal_column = 0;
-        if (++terminal_row == VGA_HEIGHT) terminal_row = 0;
+        if (++terminal_row == VGA_HEIGHT)
+        {
+            terminal_scroll();
+            terminal_row = 0;
+        }
     }
     
 }
@@ -144,6 +156,10 @@ void kernel_main(void)
     terminal_initialize();
 
     /* writes to the terminal */
-    terminal_writestring("Hello, World!\n");
+    terminal_writestring("Welcome to VybrantOS\n");
+    for (size_t i = 0; i < 50; i++)
+    {
+        terminal_writestring("VybrantOS\n");
+    }
 }
 
