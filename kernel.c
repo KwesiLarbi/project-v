@@ -82,23 +82,6 @@ void terminal_setcolor(uint8_t color)
     terminal_color = color;
 }
 
-void terminal_putentryat(char c, uint8_t color, size_t x, size_t y)
-{
-    const size_t i = y * VGA_WIDTH + x;
-    terminal_buffer[i] = vga_entry(c, color);
-}
-
-void terminal_scroll(void)
-{
-    for (size_t i = 0; i < VGA_HEIGHT; i++)
-    {
-        for (size_t j = 0; j < VGA_WIDTH; j++)
-        {
-            terminal_buffer[i * VGA_WIDTH + j] = terminal_buffer[(i + 1) * VGA_WIDTH + j];
-        }
-    }
-}
-
 void update_cursor(size_t x, size_t y)
 {
     uint16_t pos = y * VGA_WIDTH + x;
@@ -108,6 +91,50 @@ void update_cursor(size_t x, size_t y)
     outb(0x3D4, 0x0E);
     outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
 }
+
+void terminal_putentryat(char c, uint8_t color, size_t x, size_t y)
+{
+    const size_t i = y * VGA_WIDTH + x;
+    terminal_buffer[i] = vga_entry(c, color);
+    update_cursor(x + 1, y);
+}
+
+void terminal_scroll(void)
+{
+    for (size_t i = 0; i < 1; i++)
+    {
+        for (size_t j = 0; j < VGA_HEIGHT; j++)
+        {
+            for (size_t k = 0; k < VGA_WIDTH; k++)
+            {
+                int index = k + (j * VGA_WIDTH);
+                terminal_buffer[index] = terminal_buffer[index + VGA_WIDTH];
+            }
+        }
+        terminal_row--;
+    }
+}
+
+void terminal_newline(void)
+{
+    terminal_row++;
+    terminal_column = 0;
+
+    if (terminal_row >= VGA_HEIGHT) terminal_scroll();
+
+    update_cursor(0, terminal_row);
+}
+
+/*
+void enable_cursor(uint8_t cursor_start, uint8_t cursor_end)
+{
+    outb((unsigned char)0x3D4, 0x0A);
+    outb((unsigned char)0x3D5, (inb(0x3D5) & 0xC0) | cursor_start);
+
+    outb(0x3D4, 0x0B);
+    outb(0x3D5, (inb(0x3D5) & 0xE0) | cursor_end);
+}
+*/
 
 void terminal_putchar(char c)
 {
@@ -125,13 +152,16 @@ void terminal_putchar(char c)
     }
     
     terminal_putentryat(c, terminal_color, terminal_column, terminal_row);
-    update_cursor(terminal_column + 1, terminal_row);
 
     if (++terminal_column == VGA_WIDTH) 
     {
         terminal_column = 0;
-        if (++terminal_row == VGA_HEIGHT) terminal_scroll();
-    }
+        if (++terminal_row == VGA_HEIGHT) 
+        {
+            terminal_row = 0;
+            terminal_scroll();
+        }
+    }       
 }
 
 void terminal_write(const char* data, size_t size)
@@ -145,6 +175,7 @@ void terminal_write(const char* data, size_t size)
 void terminal_writestring(const char* data)
 {
     terminal_write(data, strlen(data));
+    terminal_newline();
 }
 
 void kernel_main(void)
@@ -152,11 +183,14 @@ void kernel_main(void)
     /* initialize terminal interface */
     terminal_initialize();
 
+    // enable_cursor(terminal_column, terminal_column + 1);
+
     /* writes to the terminal */
     terminal_writestring("Welcome to VybrantOS");
-    // for (size_t i = 0; i < 50; i++)
-    // {
-    //     terminal_writestring("VybrantOS\n");
-    // }
+    
+    /*for (size_t i = 0; i < 50; i++)
+    {
+        terminal_writestring("VybrantOS\n");
+    }*/
 }
 
