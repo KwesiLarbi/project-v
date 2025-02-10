@@ -2,6 +2,7 @@
 #include <stddef.h> 
 #include <stdint.h>
 #include "inc/io.h"
+#include "inc/stdio.h"
 
 
 #ifdef __linux__ 
@@ -161,7 +162,7 @@ void terminal_putchar(char c)
             terminal_row = 0;
             terminal_scroll();
         }
-    }       
+    }     
 }
 
 void terminal_write(const char* data, size_t size)
@@ -188,9 +189,11 @@ void kernel_main(void)
     /* writes to the terminal */
     terminal_writestring("Welcome to VybrantOS");
 
-    for (size_t i = 0; i < 100; i++)
-    {
-        terminal_writestring("VybrantOS");
-    }
+    terminal_writestring(getchar());
+
+    // for (size_t i = 0; i < 100; i++)
+    // {
+    //     terminal_writestring("VybrantOS");
+    // }
 }
 
