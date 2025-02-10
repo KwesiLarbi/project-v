@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <stddef.h> 
 #include <stdint.h>
-#include <sys/io.h>
+#include "inc/io.h"
 
 
 #ifdef __linux__ 
@@ -187,10 +187,10 @@ void kernel_main(void)
 
     /* writes to the terminal */
     terminal_writestring("Welcome to VybrantOS");
-    
-    /*for (size_t i = 0; i < 50; i++)
+
+    for (size_t i = 0; i < 100; i++)
     {
-        terminal_writestring("VybrantOS\n");
-    }*/
+        terminal_writestring("VybrantOS");
+    }
 }
 
