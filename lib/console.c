@@ -72,8 +72,24 @@ static uint8_t shift_map[256] =
     [0xD2] = KEY_INS,                   [0xD3] = KEY_DEL
 };
 
+#define C(x) (x - '@')
+
 static uint8_t ctl_map[256] =
-{};
+{
+    NO,         NO,         NO,         NO,         NO,         NO,         NO,         NO,
+    NO,         NO,         NO,         NO,         NO,         NO,         NO,         NO,
+    C('Q'),     C('W'),     C('E'),     C('R'),     C('T'),     C('Y'),     C('U'),     C('I'),
+    C('O'),     C('P'),     NO,         NO,         '\r',       NO,         C('A'),     C('S'),
+    C('D'),     C('F'),     C('G'),     C('H'),     C('J'),     C('K'),     C('L'),     NO,
+    NO,         NO,         NO,         C('\\'),    C('Z'),     C('X'),     C('C'),     C('V'),
+    C('B'),     C('N'),     C('M'),     NO,         NO,         C('/'),     NO,         NO,
+    [0x97] = KEY_HOME,
+    [0xB5] = C('/'),                    [0xC8] = KEY_UP,
+    [0xC9] = KEY_PGUP,                  [0xCB] = KEY_LF,
+    [0xCD] = KEY_RT,                    [0xCF] = KEY_END,
+    [0xD0] = KEY_DN,                    [0xD1] = KEY_PGDN,
+    [0xD2] = KEY_INS,                   [0xD3] = KEY_DEL
+};
 
 static uint8_t *char_code[4] =
 {
@@ -121,6 +137,25 @@ static int kbd_proc_data(void)
     shift ^= toggle_code[data];
 
     c = char_code[shift & (CTL | SHIFT)][data];
+    if (shift & CAPSLOCK)
+    {
+        if ('a' <= c && c <= 'z')
+        {
+            c += 'A' - 'a';
+        }
+        else if ('A' <= c && c <= 'Z')
+        {
+            c += 'a' - 'A';
+        }
+    }
+
+    /* process special keys */
+    /* Ctrl-Alt-Del: reboot */
+    if (!(~shift & (CTL | ALT)) && c == KEY_DEL)
+    {
+        cprintf("Rebooting!\n");
+        outb(0x92, 0x3);
+    }
 
     return c;
 }
