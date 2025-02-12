@@ -3,6 +3,20 @@
 #include "inc/io.h"
 #include "inc/kbdreg.h"
 
+static void cons_intr(int (*proc)(void));
+static void cons_putc(int c);
+
+/* I/O delay routine */
+static void delay(void)
+{
+    inb(0x84);
+    inb(0x84);
+    inb(0x84);
+    inb(0x84);
+}
+
+/* Serial I/O code */
+
 /* Keyboard input code */
 #define NO          0
 #define SHIFT       (1<<0)
@@ -193,10 +207,23 @@ int cons_getchar(void)
     return 0;
 }
 
+/* output a character to the console */
+static void cons_putchar(int c)
+{
+    serial_putchar(c);
+    lpt_putchar(c);
+    cga_putchar(c);
+}
+
+void cputchar(int c)
+{
+    cons_putchar(c);
+}
+
 int getchar(void)
 {
     int c;
-    while ((c = cons_getc()) == 0)
+    while ((c = cons_getchar()) == 0)
         /* do absolutely nothing */
     return c;
 }
