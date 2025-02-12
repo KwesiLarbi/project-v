@@ -3,8 +3,10 @@
 #include "inc/io.h"
 #include "inc/kbdreg.h"
 
+
 static void cons_intr(int (*proc)(void));
 static void cons_putc(int c);
+
 
 /* I/O delay routine */
 static void delay(void)
@@ -15,7 +17,9 @@ static void delay(void)
     inb(0x84);
 }
 
-/* Serial I/O code: used to control and communicate with serial devices */
+
+/**** Serial I/O code: used to control and communicate with serial devices ****/
+
 #define COM1        0x3F8
 
 #define COM_RX      0    /* In: Receive buffer (DLAB=0) */
@@ -70,7 +74,7 @@ static void serial_init(void)
     /* set speed, requires DLAB latch */
     outb(COM1 + COM_LCR, COM_LCR_DLAB);
     outb(COM1 + COM_DLL, (uint8_t) (115200 / 9600));
-    outb(COM1 + COM_DLM);
+    outb(COM1 + COM_DLM, 0);
 
     /* 8 data bits, 1 stop bit, parity off; turn off DLAB latch */
     outb(COM1 + COM_LCR, COM_LCR_WLEN8 & ~COM_LCR_DLAB);
@@ -88,7 +92,27 @@ static void serial_init(void)
     (void) inb(COM1 + COM_RX);
 }
 
-/* Keyboard input code */
+
+
+
+/**** Parallel port output code ****/
+
+static void lpt_putc(int c)
+{
+    int i;
+    for (i = 0; !(inb(0x378+1) & 0x80) && i < 12800; i++)
+        delay();
+    
+    outb(0x378+0, c);
+    outb(0x378+2, 0x08|0x04|0x01);
+    outb(0x378+2, 0x08);
+}
+
+
+
+
+/**** Keyboard input code ****/
+
 #define NO          0
 #define SHIFT       (1<<0)
 #define CTL         (1<<1)
