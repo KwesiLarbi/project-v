@@ -1,7 +1,40 @@
-#include "inc/stdio.h"
 #include <stdint.h>
+#include "inc/stdio.h"
+#include "inc/io.h"
+#include "inc/kbdreg.h"
 
 #define BUFFSIZE 512
+
+static int kbd_proc_data(void)
+{
+    int c;
+    uint8_t stat, data;
+    static uint32_t shift;
+
+    stat = inb(KBSTATP);
+    if ((stat & KBS_DIB) == 0) return -1;
+
+    /* ignore data from mouse */
+    if (stat & KBS_TERR) return -1;
+
+    data = inb(KBDATAP);
+
+    if (data == 0xE0)
+    {
+        /* E0 escape character */
+        shift |= E0ESC;
+        return 0;
+    }
+    else if (data & 0x80)
+    {
+        /* key released */
+    }
+}
+
+void kbd_intr(void)
+{
+    cons_intr(kbd_proc_data);
+}
 
 static struct
 {
@@ -14,6 +47,9 @@ static struct
 int cons_getchar(void)
 {
     int c;
+
+    serial_intr();
+    kbd_intr();
 
     /* grab next character from the input buffer */
     if (cons.rpos != cons.wpos)
